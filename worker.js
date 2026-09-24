@@ -66,14 +66,16 @@ async function saveCfg(env, patch) {
 
 // ---------- VLESS 协议 ----------
 function parseVLESSHeader(buf, uuidRaw) {
-  if (buf.byteLength < 26) return null;
+  // 标准 VLESS: ver(1B)=0 + uuid(16B) + addonLen(1B) + addon(nB) + cmd(1B) + port(2B) + atype(1B) + addr + payload
+  if (buf.byteLength < 24) return null;
   if (buf[0] !== 0) return null;
-  const idLen = buf[1];
-  if (buf.byteLength < 2 + idLen + 4) return null;
   let uidHex = '';
-  for (let i = 0; i < idLen; i++) uidHex += buf[2 + i].toString(16).padStart(2, '0');
+  for (let i = 0; i < 16; i++) uidHex += buf[1 + i].toString(16).padStart(2, '0');
   if (uidHex !== uuidRaw.replaceAll('-', '')) return null;
-  let off = 2 + idLen;
+  let off = 17;
+  const addonLen = buf[off]; off += 1 + addonLen;
+  if (buf.byteLength < off + addonLen + 4) return null;
+  off += addonLen;
   const cmd = buf[off]; off += 1;
   if (cmd !== 1) return { udpOnly: true };
   const port = (buf[off] << 8) | buf[off + 1]; off += 2;
@@ -360,8 +362,17 @@ function nextTheme(){var i=themes.indexOf(cur);cur=themes[(i+1)%themes.length];a
   return '<!DOCTYPE html><html lang="zh" data-theme="sakura"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LiteProxy 控制台</title><style>' + css + '</style></head><body>' + body + '</body></html>';
 }
 
+let _lastLog = 0;
+async function logReq(env, tag, extra) {
+  const now = Date.now();
+  if (now - _lastLog < 2000) return;
+  _lastLog = now;
+  try { await env.C.put('log:' + now.toString(36), JSON.stringify(Object.assign({ t: new Date(now).toISOString().slice(11, 19), tag: tag }, extra)), { expirationTtl: 3600 }); } catch (e) {}
+}
+
 async function handleWS(request, uuid, env, ctx) {
       const pair = new WebSocketPair();
+      logReq(env, 'ws-in', { path: (new URL(request.url).pathname || '').slice(0, 30), proto: (request.headers.get('sec-websocket-protocol') || '').length, ua: (request.headers.get('user-agent') || '').slice(0, 40) });
       const server = pair[1];
       server.accept();
       let first = null;
@@ -434,6 +445,12 @@ export default {
       return new Response(buildBase64Sub(uuid, host, cfg), {
         headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
       });
+    }
+    if (rest === '/api/log') {
+      const list = await env.C.list({ prefix: 'log:', limit: 20 });
+      const out = [];
+      for (const k of (list.keys || [])) out.push(await env.C.get(k.name));
+      return new Response((out.join('\n') || 'empty'), { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
     if (rest === '/api/err') {
       const e = await env.C.get('last_err');
