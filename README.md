@@ -1,10 +1,10 @@
 # ⚡ LiteProxy
 
-轻量自用 Cloudflare 代理：**单文件 Worker** 实现 VLESS-WS-TLS 内核 + 内置「星铁粉紫」管理面板，节点少而精，配置存 KV、保存即生效。
+轻量自用 Cloudflare 代理：**单文件 Worker** 实现 VLESS-WS-TLS 内核 + 内置「梦幻粉紫」管理面板，节点少而精，配置存 KV、保存即生效。
 
 ## 特性
 
-- 🎀 **星铁粉紫面板**：粉紫渐变 + 光斑漂移 + 毛玻璃卡片，☀️/🌙/💗 三主题循环切换（localStorage 记忆），`prefers-reduced-motion` 自动降级
+- 🎀 **梦幻粉紫面板**：粉紫渐变 + 光斑漂移 + 毛玻璃卡片，☀️/🌙/💗 三主题循环切换（localStorage 记忆），`prefers-reduced-motion` 自动降级
 - 📌 **节点少而精**：主节点 + 最多 8 个手动优选，面板内编辑保存立刻进订阅
 - ⚡ **延迟测试**：面板一键并发测试所有优选节点，按快→慢排序显示
 - 🌍 **ProxyIP 出站**：目标为 Cloudflare IP 时自动走 ProxyIP 反代，直连失败自动回退
