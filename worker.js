@@ -163,7 +163,7 @@ function buildNodes(uuid, host, cfg) {
     ...n,
     link: 'vless://' + uuid + '@' + n.addr + ':' + n.port +
       '?encryption=none&security=tls&sni=' + host + '&fp=chrome&type=ws&host=' + host +
-      '&path=' + encodeURIComponent('/?ed=2048') + '#' + encodeURIComponent(n.name)
+      '&path=' + encodeURIComponent('/' + uuid + '?ed=2048') + '#' + encodeURIComponent(n.name)
   }));
 }
 
@@ -187,7 +187,7 @@ function buildClashYAML(uuid, host, cfg) {
     L.push('    servername: ' + host);
     L.push('    network: ws');
     L.push('    ws-opts:');
-    L.push('      path: ' + escYAML('/?ed=2048'));
+    L.push('      path: ' + escYAML('/' + uuid + '?ed=2048'));
     L.push('      headers:');
     L.push('        Host: ' + host);
   }
@@ -357,17 +357,7 @@ function nextTheme(){var i=themes.indexOf(cur);cur=themes[(i+1)%themes.length];a
   return '<!DOCTYPE html><html lang="zh" data-theme="sakura"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LiteProxy 控制台</title><style>' + css + '</style></head><body>' + body + '</body></html>';
 }
 
-// ---------- 主路由 ----------
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const host = url.hostname;
-    const uuid = (env.u || '').trim();
-    const path = url.pathname;
-
-    // WebSocket：VLESS 入口
-    if (request.headers.get('Upgrade') === 'websocket') {
-      if (!uuid) return new Response('not configured', { status: 500 });
+async function handleWS(request, uuid, env, ctx) {
       const pair = new WebSocketPair();
       const server = pair[1];
       server.accept();
@@ -386,15 +376,36 @@ export default {
       if (first && first.byteLength > 0) {
         await forwardTCP(server, first, uuid, await loadCfg(env), ctx);
       } else {
-        const firstMsg = new Promise((res) => {
-          const onMsg = (ev) => { server.removeEventListener('message', onMsg); res(ev.data); };
-          server.addEventListener('message', onMsg);
-        });
-        const data = await firstMsg;
-        const arr = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer || data);
-        await forwardTCP(server, arr, uuid, await loadCfg(env), ctx);
+        // 先返回 101，再异步等首包，避免与客户端互相等待死锁
+        server.addEventListener('message', async (ev) => {
+          try {
+            const cfg2 = await loadCfg(env);
+            const d = ev.data;
+            const arr = d instanceof ArrayBuffer ? new Uint8Array(d) : new Uint8Array(d.buffer || d);
+            await forwardTCP(server, arr, uuid, cfg2, ctx);
+          } catch (e) { try { server.close(1011); } catch (e2) {} }
+        }, { once: true });
       }
       return new Response(null, { status: 101, webSocket: pair[0] });
+}
+
+// ---------- 主路由 ----------
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const host = url.hostname;
+    const uuid = (env.u || '').trim();
+    const path = url.pathname;
+
+    // WebSocket：VLESS 入口
+    if (request.headers.get('Upgrade') === 'websocket') {
+      if (!uuid) return new Response('not configured', { status: 500 });
+      try {
+        return await handleWS(request, uuid, env, ctx);
+      } catch (err) {
+        try { await env.C.put('last_err', new Date().toISOString() + ' | ' + String(err && err.stack || err)); } catch (e2) {}
+        return new Response('ws error: ' + String(err && err.message || err), { status: 500 });
+      }
     }
 
     // 面板 / 订阅 / API：必须带正确 UUID 前缀
@@ -420,6 +431,10 @@ export default {
       return new Response(buildBase64Sub(uuid, host, cfg), {
         headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
       });
+    }
+    if (rest === '/api/err') {
+      const e = await env.C.get('last_err');
+      return new Response(e || 'no error', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
     if (rest === '/api/save' && request.method === 'POST') {
       try {
