@@ -365,7 +365,7 @@ function nextTheme(){var i=themes.indexOf(cur);cur=themes[(i+1)%themes.length];a
 let _lastLog = 0;
 async function logReq(env, tag, extra) {
   const now = Date.now();
-  if (now - _lastLog < 2000) return;
+  if (now - _lastLog < 300000) return; // 节流5分钟, 护KV每日1000写额度
   _lastLog = now;
   try { await env.C.put('log:' + now.toString(36), JSON.stringify(Object.assign({ t: new Date(now).toISOString().slice(11, 19), tag: tag }, extra)), { expirationTtl: 3600 }); } catch (e) {}
 }
