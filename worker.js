@@ -185,9 +185,12 @@ function buildClashYAML(uuid, host, cfg) {
     L.push('    tls: true');
     L.push('    udp: false');
     L.push('    servername: ' + host);
+    L.push('    client-fingerprint: chrome');
     L.push('    network: ws');
     L.push('    ws-opts:');
     L.push('      path: ' + escYAML('/' + uuid + '?ed=2048'));
+    L.push('      max-early-data: 2048');
+    L.push('      early-data-header-name: Sec-WebSocket-Protocol');
     L.push('      headers:');
     L.push('        Host: ' + host);
   }
