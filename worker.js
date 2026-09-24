@@ -1,7 +1,7 @@
 // ============================================================
-// LiteProxy v1.0 — 自用轻量 CF 代理（VLESS-WS-TLS）+ 星铁粉紫面板
+// LiteProxy v1.0 — 自用轻量 CF 代理（VLESS-WS-TLS）+ 梦幻粉紫面板
 // 单文件 Worker · 配置存 KV 即时生效 · 节点少而精
-// 界面主题：三月七小助手同款「星铁粉紫」三态切换
+// 界面主题：梦幻粉紫三态切换（粉紫/深夜/亮色）
 // ============================================================
 import { connect } from 'cloudflare:sockets';
 
@@ -251,7 +251,7 @@ async function pingNodes(cfg) {
   return out;
 }
 
-// ---------- 星铁粉紫面板 ----------
+// ---------- 梦幻粉紫面板 ----------
 function panelHTML(uuid, host, cfg) {
   const subURL = 'https://' + host + '/' + uuid + '/sub';
   const apiBase = 'https://' + host + '/' + uuid;
@@ -357,7 +357,7 @@ return '<div><span class="okc">●</span> '+x.name+' — '+x.ms+'ms <span style=
 var themes=['light','dark','sakura'];var icons={light:'☀️',dark:'🌙',sakura:'💗'};
 var cur=localStorage.getItem('lp_theme')||'sakura';apply(cur);
 function apply(t){document.documentElement.setAttribute('data-theme',t);document.getElementById('themeBtn').textContent=icons[t]}
-function nextTheme(){var i=themes.indexOf(cur);cur=themes[(i+1)%themes.length];apply(cur);localStorage.setItem('lp_theme',cur);toast('主题：'+(cur==='sakura'?'星铁粉紫':cur==='dark'?'深夜':'亮色'))}
+function nextTheme(){var i=themes.indexOf(cur);cur=themes[(i+1)%themes.length];apply(cur);localStorage.setItem('lp_theme',cur);toast('主题：'+(cur==='sakura'?'梦幻粉紫':cur==='dark'?'深夜':'亮色'))}
 </script>`;
   return '<!DOCTYPE html><html lang="zh" data-theme="sakura"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LiteProxy 控制台</title><style>' + css + '</style></head><body>' + body + '</body></html>';
 }
